@@ -1,34 +1,9 @@
-# blog-cover-gen
+# chaos-vis-image-gen
+
 
 ## Quick start
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-```
-
-Generate image from hash:
-
-```bash
-python scripts/generate_image.py \
-  --hash-file example.hash.txt \
-  --password cha0tic \
-  --output output/cover.png \
-  --cmap inferno \
-  --density 15 \
-  --iterations 100000000 \
-  --width 690 \
-  --height 476 \
-  --left-padding 0.35 \
-  --right-padding 0.35 \
-  --top-padding 0.05 \
-  --bottom-padding 0.05 \
-  --background-color ""
-
-# add --flip to invert final colors
-# add --no-progress if you don't want tqdm output
-```
+Use this [Colab Notebook](https://colab.research.google.com/drive/1Bah3UDoY9OWzAAnxnhXVEl0KoHE8RDGZ?usp=sharing) to get started!
 
 ## API usage
 
@@ -72,6 +47,36 @@ from blog_cover_gen import render_cover_from_json_payload, extract_json_payload_
 json_payload = extract_json_payload_from_image("output/cover.png")
 new_output = render_cover_from_json_payload(json_payload, output_path="output/cover_rebuilt.png")
 print(new_output)
+```
+
+## Local Installation
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+Generate image from hash:
+
+```bash
+python scripts/generate_image.py \
+  --hash-file example.hash.txt \
+  --password cha0tic \
+  --output output/cover.png \
+  --cmap inferno \
+  --density 15 \
+  --iterations 100000000 \
+  --width 690 \
+  --height 476 \
+  --left-padding 0.35 \
+  --right-padding 0.35 \
+  --top-padding 0.05 \
+  --bottom-padding 0.05 \
+  --background-color ""
+
+# add --flip to invert final colors
+# add --no-progress if you don't want tqdm output
 ```
 
 ## JSON payload behavior
