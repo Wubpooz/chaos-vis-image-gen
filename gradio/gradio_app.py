@@ -7,7 +7,6 @@ import logging
 
 import gradio as gr
 from PIL import Image
-from chaos_vis_image_gen import render_cover_from_hash
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 
@@ -1348,7 +1347,12 @@ def launch_ui(
             outputs=output_image,
         )
 
-    demo.launch(share=True, quiet=True)
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=int(os.getenv("PORT", "7860")),
+        share=False,
+        quiet=False,
+    )
 
 
 # ── Entry Point ───────────────────────────────────────────────────────────────
