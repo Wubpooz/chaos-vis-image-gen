@@ -37,6 +37,9 @@ DEFAULT_SOURCE_HASH = None
 DEFAULT_SECRET_NOTE = ""
 DEFAULT_TITLE = ""
 DEFAULT_URL = ""
+DEFAULT_USE_CACHE = False
+CACHE_SCHEMA_VERSION = "grid-cache.v1"
+CACHE_ALGO_VERSION = "attractor-grid.v1"
 
 
 def _parse_hex_color(hex_color: str) -> np.ndarray:
@@ -174,6 +177,56 @@ def _generated_hash_from_args(args: dict) -> str:
     return f"generated:{digest}"
 
 
+def _default_cache_dir() -> Path:
+    """Return ~/.cache/<repository-name> as the default cache directory."""
+    repository_name = Path(__file__).resolve().parents[2].name
+    return Path.home() / ".cache" / repository_name
+
+
+def _cache_key_for_grid(
+    args: dict,
+    max_iterations: int,
+    width: int,
+    height: int,
+    left_padding: float,
+    right_padding: float,
+    top_padding: float,
+    bottom_padding: float,
+) -> str:
+    """Build a deterministic cache key for raw simulation grid output."""
+    cache_input = {
+        "cache_schema": CACHE_SCHEMA_VERSION,
+        "cache_algo": CACHE_ALGO_VERSION,
+        "args": args,
+        "max_iterations": max_iterations,
+        "width": width,
+        "height": height,
+        "left_padding": left_padding,
+        "right_padding": right_padding,
+        "top_padding": top_padding,
+        "bottom_padding": bottom_padding,
+    }
+    canonical = json.dumps(cache_input, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _load_cached_grid(cache_dir: Path, cache_key: str) -> tuple[np.ndarray, bool]:
+    """Load cached raw grid if present. Returns (grid, loaded)."""
+    cache_file = cache_dir / f"{cache_key}.npz"
+    if not cache_file.exists():
+        return np.empty((0, 0), dtype=np.float32), False
+
+    data = np.load(cache_file)
+    grid = data["grid"].astype(np.float32, copy=False)
+    return grid, True
+
+
+def _save_cached_grid(cache_dir: Path, cache_key: str, grid: np.ndarray) -> None:
+    """Persist raw simulation grid to cache directory."""
+    cache_file = cache_dir / f"{cache_key}.npz"
+    np.savez_compressed(cache_file, grid=grid.astype(np.float32, copy=False))
+
+
 def _write_image_and_json_payload(output_path: Path, rgb_image: np.ndarray, json_payload: dict) -> None:
     """Write PNG output, JSON sidecar, and embedded JSON payload."""
     imageio.imwrite(str(output_path), rgb_image, format="png")
@@ -277,6 +330,7 @@ def render_cover_from_args(
     secret_note: str = DEFAULT_SECRET_NOTE,
     title: str = DEFAULT_TITLE,
     url: str = DEFAULT_URL,
+    use_cache: bool = DEFAULT_USE_CACHE,
 ) -> Path:
     """Render one cover image from attractor arguments and write JSON payload metadata."""
     output_path = Path(output_path)
@@ -304,23 +358,65 @@ def render_cover_from_args(
     y_scale = (height - 1) / (ymax - ymin)
 
     grid = np.zeros((height, width), dtype=np.float32)
-    chunk_size = 2_000_000
-    chunks = max_iterations // chunk_size
-    remainder = max_iterations % chunk_size
 
-    if show_progress:
-        print("Preparing JIT kernel (first chunk may take longer)...")
+    grid_loaded_from_cache = False
+    if use_cache:
+        try:
+            cache_dir = _default_cache_dir()
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            cache_key = _cache_key_for_grid(
+                args=args,
+                max_iterations=max_iterations,
+                width=width,
+                height=height,
+                left_padding=left_padding,
+                right_padding=right_padding,
+                top_padding=top_padding,
+                bottom_padding=bottom_padding,
+            )
+            cached_grid, grid_loaded_from_cache = _load_cached_grid(cache_dir, cache_key)
+            if grid_loaded_from_cache:
+                grid = cached_grid
+        except Exception as exc:
+            warnings.warn(f"Cache unavailable, continuing without cache: {exc}", stacklevel=2)
+            grid_loaded_from_cache = False
 
-    for _ in _progress_range(chunks, show_progress=show_progress, progress_desc=progress_desc):
-        grid, x0, y0 = _compute_grid_and_last_position(
-            x0, y0, ax, ay, xmin, xmax, ymin, ymax, x_scale, y_scale, grid, chunk_size
-        )
-    if remainder:
+    if not grid_loaded_from_cache:
+        chunk_size = 2_000_000
+        chunks = max_iterations // chunk_size
+        remainder = max_iterations % chunk_size
+
         if show_progress:
-            print(f"Processing remainder chunk ({remainder} iterations)...")
-        grid, x0, y0 = _compute_grid_and_last_position(
-            x0, y0, ax, ay, xmin, xmax, ymin, ymax, x_scale, y_scale, grid, remainder
-        )
+            print("Preparing JIT kernel (first chunk may take longer)...")
+
+        for _ in _progress_range(chunks, show_progress=show_progress, progress_desc=progress_desc):
+            grid, x0, y0 = _compute_grid_and_last_position(
+                x0, y0, ax, ay, xmin, xmax, ymin, ymax, x_scale, y_scale, grid, chunk_size
+            )
+        if remainder:
+            if show_progress:
+                print(f"Processing remainder chunk ({remainder} iterations)...")
+            grid, x0, y0 = _compute_grid_and_last_position(
+                x0, y0, ax, ay, xmin, xmax, ymin, ymax, x_scale, y_scale, grid, remainder
+            )
+
+        if use_cache:
+            try:
+                cache_dir = _default_cache_dir()
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                cache_key = _cache_key_for_grid(
+                    args=args,
+                    max_iterations=max_iterations,
+                    width=width,
+                    height=height,
+                    left_padding=left_padding,
+                    right_padding=right_padding,
+                    top_padding=top_padding,
+                    bottom_padding=bottom_padding,
+                )
+                _save_cached_grid(cache_dir, cache_key, grid)
+            except Exception as exc:
+                warnings.warn(f"Failed to write cache, continuing: {exc}", stacklevel=2)
 
     zero_mask = grid == 0
 
@@ -354,6 +450,7 @@ def render_cover_from_args(
         "cmap": cmap,
         "background_color": background_color,
         "flip": flip,
+        "use_cache": use_cache,
     }
 
     json_payload = _build_json_payload(
@@ -401,6 +498,7 @@ def render_cover_from_json_payload(json_payload: dict, output_path: str | Path |
         secret_note=str(json_payload.get("secret_note", DEFAULT_SECRET_NOTE)),
         title=str(json_payload.get("title", DEFAULT_TITLE)),
         url=str(json_payload.get("url", DEFAULT_URL)),
+        use_cache=bool(render_config.get("use_cache", DEFAULT_USE_CACHE)),
     )
 
 
@@ -424,6 +522,7 @@ def render_cover_from_hash(
     secret_note: str = DEFAULT_SECRET_NOTE,
     title: str = DEFAULT_TITLE,
     url: str = DEFAULT_URL,
+    use_cache: bool = DEFAULT_USE_CACHE,
 ) -> Path:
     """Decrypt a hash and render a cover image using the resolved attractor arguments."""
     args = hash_to_args(hash_text.strip(), password=password)
@@ -447,4 +546,5 @@ def render_cover_from_hash(
         secret_note=secret_note,
         title=title,
         url=url,
+        use_cache=use_cache,
     )

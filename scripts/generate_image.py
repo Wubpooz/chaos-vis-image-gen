@@ -21,6 +21,7 @@ def main() -> None:
     parser.add_argument("--bottom-padding", type=float, default=0.05, help="Bottom padding ratio.")
     parser.add_argument("--background-color", default="", help="Hex color for zero-density pixels (e.g. #000000).")
     parser.add_argument("--flip", action="store_true", help="Invert final image colors.")
+    parser.add_argument("--use-cache", action="store_true", help="Enable raw grid cache in ~/.cache/<repo-name>.")
     parser.add_argument("--no-progress", action="store_true", help="Disable progress output.")
     args = parser.parse_args()
 
@@ -41,6 +42,7 @@ def main() -> None:
         show_progress=not args.no_progress,
         background_color=args.background_color,
         flip=args.flip,
+        use_cache=args.use_cache,
     )
     print(f"Saved image: {output}")
 
