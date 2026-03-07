@@ -432,10 +432,9 @@ def render_cover_from_args(
     rgba_image = cmap_func(grid)
     rgb_image = (np.delete(rgba_image, 3, 2) * 255).astype(np.uint8)
 
-    if background_color.strip():
-        rgb_image[zero_mask] = _parse_hex_color(background_color)
-
     final_image = (255 - rgb_image).astype(np.uint8) if flip else rgb_image
+    if background_color.strip():
+        final_image[zero_mask] = _parse_hex_color(background_color)
     effective_hash = source_hash.strip() if (source_hash and source_hash.strip()) else _generated_hash_from_args(args)
 
     render_config = {
