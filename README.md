@@ -1,3 +1,10 @@
+---
+title: chaos-vis-image-gen
+app_file: gradio_app.py
+sdk: gradio
+sdk_version: 6.9.0
+---
+
 # chaos-vis-image-gen
 
 
