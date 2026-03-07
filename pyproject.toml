@@ -1,5 +1,5 @@
 [project]
-name = "blog-cover-gen"
+name = "chaos-vis-image-gen"
 version = "0.1.0"
 description = "Generate single chaos-based blog cover images from encrypted attractor parameters"
 readme = "README.md"

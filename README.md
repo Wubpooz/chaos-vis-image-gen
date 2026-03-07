@@ -17,7 +17,7 @@ Use this [Colab Notebook](https://colab.research.google.com/drive/1Bah3UDoY9OWzA
 ### Render from encrypted hash
 
 ```python
-from blog_cover_gen import render_cover_from_hash
+from chaos_vis_image_gen import render_cover_from_hash
 
 output = render_cover_from_hash(
     hash_text=open("example.hash.txt").read().strip(),
@@ -40,7 +40,7 @@ print(output)
 ### Extract JSON payload from image
 
 ```python
-from blog_cover_gen import extract_json_payload_from_image
+from chaos_vis_image_gen import extract_json_payload_from_image
 
 json_payload = extract_json_payload_from_image("output/cover.png")
 print(json_payload)
@@ -49,7 +49,7 @@ print(json_payload)
 ### Render from JSON payload
 
 ```python
-from blog_cover_gen import render_cover_from_json_payload, extract_json_payload_from_image
+from chaos_vis_image_gen import render_cover_from_json_payload, extract_json_payload_from_image
 
 json_payload = extract_json_payload_from_image("output/cover.png")
 new_output = render_cover_from_json_payload(json_payload, output_path="output/cover_rebuilt.png")
@@ -90,7 +90,7 @@ python scripts/generate_image.py \
 
 For each rendered image `foo.png`, the generator writes:
 - sidecar `foo.json`
-- embedded PNG `tEXt` JSON payload under key `blog_cover_gen`
+- embedded PNG `tEXt` JSON payload under key `chaos_vis_image_gen`
 
 `json_payload.hash` is always present:
 - If rendering from hash (`render_cover_from_hash`), it stores that source hash.

@@ -2,7 +2,7 @@
 import argparse
 from pathlib import Path
 
-from blog_cover_gen import render_cover_from_hash
+from chaos_vis_image_gen import render_cover_from_hash
 
 
 def main() -> None:

@@ -153,7 +153,7 @@ def _build_json_payload(
 ) -> dict:
     """Create the JSON payload stored as sidecar and embedded PNG metadata."""
     json_payload = {
-        "schema": "blog-cover-gen.json-payload.v1",
+        "schema": "chaos-vis-image-gen.json-payload.v1",
         "created_at_utc": dt.datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
         "output_file": output_path.name,
         "variant": variant,
@@ -236,7 +236,7 @@ def _write_image_and_json_payload(output_path: Path, rgb_image: np.ndarray, json
     sidecar_path = output_path.with_suffix(".json")
     sidecar_path.write_text(json.dumps(json_payload, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
 
-    _embed_png_text_chunk(output_path, "blog_cover_gen", json_payload_text)
+    _embed_png_text_chunk(output_path, "chaos_vis_image_gen", json_payload_text)
 
 
 def extract_json_payload_from_image(image_path: str | Path, print_detail: bool = True) -> dict:
@@ -263,7 +263,7 @@ def extract_json_payload_from_image(image_path: str | Path, print_detail: bool =
             if nul_idx != -1:
                 key = data[:nul_idx].decode("latin-1")
                 value = data[nul_idx + 1 :].decode("utf-8")
-                if key == "blog_cover_gen":
+                if key == "chaos_vis_image_gen":
                     json_payload = json.loads(value)
                     title = str(json_payload.get("title", "") or "")
                     url = str(json_payload.get("url", "") or "")
@@ -280,7 +280,7 @@ def extract_json_payload_from_image(image_path: str | Path, print_detail: bool =
 
         offset = data_end + 4
 
-    raise ValueError(f"No embedded blog_cover_gen JSON payload found in {image_path}")
+    raise ValueError(f"No embedded chaos_vis_image_gen JSON payload found in {image_path}")
 
 
 def _assert_embedded_json_payload_matches(image_path: Path, expected_json_payload: dict) -> None:
